@@ -74,7 +74,7 @@ class Picker {
   final double? textScaleFactor;
 
   final EdgeInsetsGeometry? columnPadding;
-  final Color? backgroundColor, headerColor, containerColor;
+  final Color? backgroundColor, headerColor, containerColor, overlayColor;
 
   /// Hide head
   final bool hideHeader;
@@ -132,6 +132,7 @@ class Picker {
       this.backgroundColor,
       this.containerColor,
       this.headerColor,
+      this.overlayColor,
       this.builderHeader,
       this.changeToFirst = false,
       this.hideHeader = false,
@@ -407,6 +408,19 @@ class PickerWidgetState<T> extends State<_PickerWidget> {
       _wait = false;
 
     final _body = <Widget>[];
+    final _overlayWidget = Positioned.fill(
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            decoration: BoxDecoration(
+              color: picker.overlayColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            height: 50,
+          ),
+        ),
+      ),
+    );
     if (!picker.hideHeader) {
       if (picker.builderHeader != null) {
         _body.add(picker.headerDecoration == null
@@ -434,19 +448,31 @@ class PickerWidgetState<T> extends State<_PickerWidget> {
     }
 
     _body.add(_wait
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: _buildViews(),
+        ? Stack(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: _buildViews(),
+              ),
+              if (picker.overlayColor != null) _overlayWidget
+            ],
           )
-        : AnimatedSwitcher(
-            duration: Duration(milliseconds: 300),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _buildViews(),
-            ),
+        : Stack(
+            children: [
+              AnimatedSwitcher(
+                duration: Duration(milliseconds: 300),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: _buildViews(),
+                ),
+              ),
+              if (picker.overlayColor != null) _overlayWidget
+            ],
           ));
 
-    if (picker.footer != null) _body.add(picker.footer!);
+    if (picker.footer != null)
+      _body.add(InkWell(
+          onTap: () => picker.doConfirm(context), child: picker.footer!));
     Widget v = Column(
       mainAxisSize: MainAxisSize.min,
       children: _body,
@@ -638,7 +664,7 @@ class PickerWidgetState<T> extends State<_PickerWidget> {
       magnification: picker.magnification,
       diameterRatio: picker.diameterRatio,
       squeeze: picker.squeeze,
-      selectionOverlay: picker.selectionOverlay,
+      selectionOverlay: null,
       childCount: picker.looping ? null : _length,
       itemBuilder: (context, index) {
         adapter.setColumn(i - 1);
